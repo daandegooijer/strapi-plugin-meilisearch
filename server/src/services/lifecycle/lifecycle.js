@@ -55,7 +55,7 @@ export default ({ strapi }) => {
             .service('meilisearch')
 
           const nbrEntries = result.count
-          const ids = result.ids
+          const documentIds = result.ids
 
           const entries = []
           const BATCH_SIZE = 500
@@ -65,10 +65,11 @@ export default ({ strapi }) => {
               start: pos,
               limit: BATCH_SIZE,
               filters: {
-                id: {
-                  $in: ids,
+                documentId: {
+                  $in: documentIds,
                 },
               },
+              status: 'published',
             })
             entries.push(...batch)
           }
@@ -156,16 +157,20 @@ export default ({ strapi }) => {
             .service('meilisearch')
 
           let entriesId = []
-          // Different ways of accessing the id's depending on the number of entries being deleted
+          // Different ways of accessing the documentId depending on the number of entries being deleted
           // In case of multiple deletes:
           if (
             params?.where?.$and &&
             params?.where?.$and[0] &&
-            params?.where?.$and[0].id?.$in
+            params?.where?.$and[0].documentId?.$in
           )
-            entriesId = params?.where?.$and[0].id.$in
-          // In case there is only one entry being deleted
-          else entriesId = [result.id]
+            entriesId = params?.where?.$and[0].documentId.$in
+          // Fallback for single deletes:
+          else if (result.documentId)
+            entriesId = [result.documentId]
+          // Legacy support for id field
+          else if (result.id)
+            entriesId = [result.id]
 
           meilisearch
             .deleteEntriesFromMeiliSearch({
@@ -174,7 +179,7 @@ export default ({ strapi }) => {
             })
             .catch(e => {
               strapi.log.error(
-                `Meilisearch could not delete entry with id: ${result.id}: ${e.message}`,
+                `Meilisearch could not delete entry with documentId: ${result.documentId || result.id}: ${e.message}`,
               )
             })
         },

@@ -98,17 +98,22 @@ export default ({ strapi }) => ({
     status = 'published',
   }) {
     const contentTypeUid = this.getContentTypeUid({ contentType })
-    if (contentTypeUid === undefined) return 0
+    if (contentTypeUid === undefined) {
+      strapi.log.warn(`[contentType] numberOfEntries: Could not get UID for ${contentType}`)
+      return 0
+    }
 
     try {
+      strapi.log.debug(`[contentType] numberOfEntries: Counting ${contentTypeUid} with status="${status}", filters=${JSON.stringify(filters)}`)
       const count = await strapi.documents(contentTypeUid).count({
         filters,
         status,
       })
+      strapi.log.debug(`[contentType] numberOfEntries: Count result for ${contentTypeUid}: ${count}`)
 
       return count
     } catch (e) {
-      strapi.log.warn(e)
+      strapi.log.warn(`[contentType] numberOfEntries error: ${e.message}`)
       return 0
     }
   },
@@ -237,26 +242,42 @@ export default ({ strapi }) => ({
    */
   actionInBatches: async function ({
     contentType,
-    callback = () => {},
+    callback = () => { },
     entriesQuery = {},
   }) {
     const batchSize = entriesQuery.limit || 500
     // Need total number of entries in contentType
+    strapi.log.info(`[contentType] actionInBatches: Querying ${contentType} with entriesQuery: ${JSON.stringify(entriesQuery)}`)
+
+    // Extract query parameters for counting
+    const { locale, ...countQuery } = entriesQuery
     const entries_count = await this.numberOfEntries({
       contentType,
-      ...entriesQuery,
+      ...countQuery,
     })
+    strapi.log.info(`[contentType] actionInBatches: Found ${entries_count} entries for ${contentType}`)
+
     const cbResponse = []
     for (let index = 0; index < entries_count; index += batchSize) {
+      // Extract query parameters for fetching - don't pass locale: 'all' to getEntries
+      const { locale: queryLocale, ...fetchQuery } = entriesQuery
+      const locale = queryLocale === 'all' ? undefined : queryLocale
+
       const entries =
         (await this.getEntries({
           start: index,
+          limit: batchSize,
           contentType,
-          ...entriesQuery,
+          ...fetchQuery,
+          ...(locale !== undefined ? { locale } : {}),
         })) || []
 
+      strapi.log.info(`[contentType] actionInBatches: Fetched ${entries.length} entries at index ${index} (batchSize: ${batchSize})`)
+
       if (entries.length > 0) {
+        strapi.log.info(`[contentType] actionInBatches: Calling callback with ${entries.length} entries`)
         const info = await callback({ entries, contentType })
+        strapi.log.info(`[contentType] actionInBatches: Callback returned:`, info)
         if (Array.isArray(info)) cbResponse.push(...info)
         else if (info) cbResponse.push(info)
       }

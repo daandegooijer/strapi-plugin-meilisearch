@@ -5,6 +5,8 @@ import listenedContentTypes from './listened-content-types'
 
 export default ({ strapi }) => {
   const store = createStoreConnector({ strapi })
+
+  console.dir(store, { depth: null });
   return {
     ...credential({ store, strapi }),
     ...listenedContentTypes({ store }),

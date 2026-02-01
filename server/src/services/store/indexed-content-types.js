@@ -1,6 +1,6 @@
 export default ({ store }) => ({
   /**
-   * Get listened contentTypes from the store.
+   * Get indexed contentTypes from the store.
    *
    * @returns {Promise<string[]>} List of contentTypes indexed in Meilisearch.
    */
@@ -8,7 +8,9 @@ export default ({ store }) => ({
     const contentTypes = await store.getStoreKey({
       key: 'meilisearch_indexed_content_types',
     })
-    return contentTypes || []
+
+    // Store connector handles parsing, just validate it's an array
+    return Array.isArray(contentTypes) ? contentTypes : []
   },
 
   /**
@@ -20,9 +22,11 @@ export default ({ store }) => ({
    * @returns {Promise<string[]>} List of contentTypes indexed in Meilisearch.
    */
   setIndexedContentTypes: async function ({ contentTypes }) {
+    // Ensure we're storing a proper array, not a Set or other object
+    const arrayToStore = Array.isArray(contentTypes) ? contentTypes : []
     return store.setStoreKey({
       key: 'meilisearch_indexed_content_types',
-      value: contentTypes,
+      value: arrayToStore,
     })
   },
 
@@ -36,11 +40,13 @@ export default ({ store }) => ({
    */
   addIndexedContentType: async function ({ contentType }) {
     const indexedContentTypes = await this.getIndexedContentTypes()
-    const newSet = new Set(indexedContentTypes)
-    newSet.add(contentType)
+    // Use array operations instead of Set to avoid serialization issues
+    if (!indexedContentTypes.includes(contentType)) {
+      indexedContentTypes.push(contentType)
+    }
 
     return this.setIndexedContentTypes({
-      contentTypes: [...newSet],
+      contentTypes: indexedContentTypes,
     })
   },
 
@@ -54,9 +60,8 @@ export default ({ store }) => ({
    */
   removeIndexedContentType: async function ({ contentType }) {
     const indexedContentTypes = await this.getIndexedContentTypes()
-
-    const newSet = new Set(indexedContentTypes)
-    newSet.delete(contentType)
-    return this.setIndexedContentTypes({ contentTypes: [...newSet] })
+    // Use array operations instead of Set to avoid serialization issues
+    const filtered = indexedContentTypes.filter(ct => ct !== contentType)
+    return this.setIndexedContentTypes({ contentTypes: filtered })
   },
 })

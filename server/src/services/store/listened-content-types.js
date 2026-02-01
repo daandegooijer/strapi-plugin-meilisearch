@@ -8,7 +8,9 @@ export default ({ store }) => ({
     const contentTypes = await store.getStoreKey({
       key: 'meilisearch_listened_content_types',
     })
-    return contentTypes || []
+
+    // Store connector handles parsing, just validate it's an array
+    return Array.isArray(contentTypes) ? contentTypes : []
   },
 
   /**
@@ -19,9 +21,11 @@ export default ({ store }) => ({
    * @returns {Promise<string[]>} - ContentType names.
    */
   setListenedContentTypes: async function ({ contentTypes = [] }) {
+    // Ensure we're storing a proper array, not a Set or other object
+    const arrayToStore = Array.isArray(contentTypes) ? contentTypes : []
     return store.setStoreKey({
       key: 'meilisearch_listened_content_types',
-      value: contentTypes,
+      value: arrayToStore,
     })
   },
 
@@ -35,11 +39,13 @@ export default ({ store }) => ({
    */
   addListenedContentType: async function ({ contentType }) {
     const listenedContentTypes = await this.getListenedContentTypes()
-    const newSet = new Set(listenedContentTypes)
-    newSet.add(contentType)
+    // Use array operations instead of Set to avoid serialization issues
+    if (!listenedContentTypes.includes(contentType)) {
+      listenedContentTypes.push(contentType)
+    }
 
     return this.setListenedContentTypes({
-      contentTypes: [...newSet],
+      contentTypes: listenedContentTypes,
     })
   },
 

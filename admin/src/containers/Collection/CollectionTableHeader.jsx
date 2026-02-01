@@ -53,6 +53,11 @@ const CollectionTableHeader = () => {
         </Th>
         <Th>
           <Typography variant="sigma">
+            {i18n('plugin.table.header.sync', 'SYNC %')}
+          </Typography>
+        </Th>
+        <Th>
+          <Typography variant="sigma">
             {i18n('plugin.table.header.hooks', 'HOOKS')}
           </Typography>
         </Th>

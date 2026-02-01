@@ -98,11 +98,11 @@ export function useCollection() {
   const addCollection = async ({ contentType }) => {
     try {
       const {
-        data: { error },
+        data: { error, taskDetails },
       } = await post(`/${pluginId}/content-type`, {
         contentType,
       })
-      console.log(error)
+      console.log(error, taskDetails)
       if (error) {
         handleNotification({
           type: 'warning',
@@ -110,13 +110,23 @@ export function useCollection() {
           link: error.link,
         })
       } else {
+        // Build message with task details
+        let message = i18n(
+          'plugin.message.success.add',
+          'Request to add a content-type is successful',
+        )
+
+        if (taskDetails && taskDetails.length > 0) {
+          const details = taskDetails.map(t =>
+            `Task ${t.uid}: ${t.status} (${t.documentsProcessed} docs, ${t.duration})`
+          ).join('; ')
+          message = `${message} - ${details}`
+        }
+
         refetchCollection()
         handleNotification({
           type: 'success',
-          message: i18n(
-            'plugin.message.success.add',
-            'Request to add a content-type is successful',
-          ),
+          message: message,
           blockTransition: false,
         })
       }

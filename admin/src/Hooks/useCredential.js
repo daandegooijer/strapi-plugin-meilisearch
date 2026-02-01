@@ -8,12 +8,14 @@ export function useCredential() {
   const [credentials, setCredentials] = useState({
     host: '',
     apiKey: '',
+    indexName: '',
     ApiKeyIsFromConfigFile: true,
     HostIsFromConfigFile: true,
   })
   const [refetchIndex, setRefetchIndex] = useState(true)
   const [host, setHost] = useState('')
   const [apiKey, setApiKey] = useState('')
+  const [indexName, setIndexName] = useState('')
   const { handleNotification } = useAlert()
   const { i18n } = useI18n()
   const { get, post } = useFetchClient()
@@ -27,6 +29,7 @@ export function useCredential() {
     } = await post(`/${pluginId}/credential`, {
       apiKey: apiKey,
       host: host,
+      indexName: indexName,
     })
     if (error) {
       handleNotification({
@@ -62,6 +65,7 @@ export function useCredential() {
       setCredentials(data)
       setHost(data.host)
       setApiKey(data.apiKey)
+      setIndexName(data.indexName || '')
     }
   }
 
@@ -74,8 +78,10 @@ export function useCredential() {
     updateCredentials,
     setHost,
     setApiKey,
+    setIndexName,
     host,
     apiKey,
+    indexName,
   }
 }
 export default useCredential

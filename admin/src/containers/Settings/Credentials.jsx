@@ -6,7 +6,7 @@ import { PERMISSIONS } from '../../constants'
 import { useRBAC } from '@strapi/strapi/admin'
 
 const Credentials = () => {
-  const { host, apiKey, credentials, setHost, setApiKey, updateCredentials } =
+  const { host, apiKey, indexName, credentials, setHost, setApiKey, setIndexName, updateCredentials } =
     useCredential()
   const { i18n } = useI18n()
   const {
@@ -35,7 +35,6 @@ const Credentials = () => {
               'URL',
             )}
             onChange={e => setHost(e.target.value)}
-            disabled={credentials.HostIsFromConfigFile}
           />
           <Field.Hint />
         </Field.Root>
@@ -63,7 +62,33 @@ const Credentials = () => {
             )}
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
-            disabled={credentials.ApiKeyIsFromConfigFile}
+          />
+          <Field.Hint />
+        </Field.Root>
+      </Box>
+      <Box padding={2}>
+        <Field.Root
+          id="indexName"
+          hint={i18n(
+            'plugin.tab.settings.input.indexName.hint',
+            'The name of the Meilisearch index to use for this installation',
+          )}
+        >
+          <Field.Label>
+            {i18n(
+              'plugin.tab.settings.input.indexName.label',
+              'Index Name',
+            )}
+          </Field.Label>
+          <Field.Input
+            type="text"
+            name="indexName"
+            value={indexName}
+            placeholder={i18n(
+              'plugin.tab.settings.input.indexName.placeholder',
+              'Index name',
+            )}
+            onChange={e => setIndexName(e.target.value)}
           />
           <Field.Hint />
         </Field.Root>
@@ -94,10 +119,6 @@ const Credentials = () => {
           <Button
             variant="secondary"
             onClick={() => updateCredentials()}
-            disabled={
-              credentials.ApiKeyIsFromConfigFile &&
-              credentials.HostIsFromConfigFile
-            }
           >
             {i18n('plugin.save', 'Save')}
           </Button>

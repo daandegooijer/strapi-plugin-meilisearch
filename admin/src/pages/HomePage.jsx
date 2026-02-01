@@ -9,6 +9,8 @@ import {
 
 import { useI18n } from '../Hooks/useI18n'
 import PluginTabs from '../containers/PluginTabs'
+import PluginIcon from '../components/PluginIcon'
+import { Flex } from '@strapi/design-system'
 
 const HomePage = () => {
   const { i18n } = useI18n()
@@ -17,7 +19,7 @@ const HomePage = () => {
     <AutoReloadOverlayBlockerProvider>
       <Page.Main>
         <Layouts.Header
-          title={i18n('plugin.name', 'Meilisearch')}
+          title={<Flex><PluginIcon width={64} height={64} />{i18n('plugin.name', 'Meilisearch')}</Flex>}
           subtitle={i18n(
             'plugin.description',
             'Search in your content-types with the Meilisearch plugin',

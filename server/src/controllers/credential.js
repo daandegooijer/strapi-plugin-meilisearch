@@ -27,9 +27,10 @@ export default ({ strapi }) => {
      * @param  {object} ctx - Http request object.
      */
     async addCredentials(ctx) {
-      const { host, apiKey } = ctx.request.body
+      const { host, apiKey, indexName } = ctx.request.body
+
       await store
-        .addCredentials({ host, apiKey })
+        .addCredentials({ host, apiKey, indexName })
         .then(credentials => {
           ctx.body = { data: credentials }
         })

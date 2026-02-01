@@ -30,6 +30,32 @@ export default {
       },
       permissions: PERMISSIONS.main,
     })
+
+    // Create a settings section for Meilisearch
+    app.createSettingSection(
+      {
+        id: pluginId,
+        intlLabel: {
+          id: `${pluginId}.plugin.name`,
+          defaultMessage: name,
+        },
+      },
+      [
+        {
+          intlLabel: {
+            id: `${pluginId}.plugin.tab.settings`,
+            defaultMessage: 'Settings',
+          },
+          id: 'settings',
+          to: `/settings/${pluginId}`,
+          async Component() {
+            const SettingsPage = await import('./pages/SettingsPage')
+            return SettingsPage.default
+          },
+          permissions: PERMISSIONS.settings,
+        },
+      ],
+    )
   },
 
   async registerTrads({ locales }) {

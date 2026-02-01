@@ -12,7 +12,17 @@ export default ({ strapi }) => {
      * @param  {string} options.key
      */
     getStoreKey: async function ({ key }) {
-      return strapiStore.get({ key })
+      const value = await strapiStore.get({ key })
+
+      // Parse JSON string if needed
+      if (typeof value === 'string' && (value.startsWith('[') || value.startsWith('{'))) {
+        try {
+          return JSON.parse(value)
+        } catch (e) {
+          return value
+        }
+      }
+      return value
     },
 
     /**
@@ -23,9 +33,14 @@ export default ({ strapi }) => {
      * @param  {any} options.value
      */
     setStoreKey: async function ({ key, value }) {
+      // Store arrays and objects as JSON strings to ensure proper serialization
+      const valueToStore = (Array.isArray(value) || (typeof value === 'object' && value !== null))
+        ? JSON.stringify(value)
+        : value
+
       return strapiStore.set({
         key,
-        value,
+        value: valueToStore,
       })
     },
 

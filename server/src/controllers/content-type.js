@@ -29,16 +29,47 @@ export default ({ strapi }) => {
     async addContentType(ctx) {
       const { contentType } = ctx.request.body
 
-      await meilisearch
-        .addContentTypeInMeiliSearch({
-          contentType,
-        })
-        .then(taskUids => {
-          ctx.body = { data: taskUids }
-        })
-        .catch(async e => {
-          ctx.body = await error.createError(e)
-        })
+      try {
+        const taskUids = await meilisearch
+          .addContentTypeInMeiliSearch({
+            contentType,
+          })
+
+        // Fetch task details for display
+        const taskDetails = []
+        if (taskUids && taskUids.length > 0) {
+          const { apiKey, host } = await strapi.plugin('meilisearch').service('store').getCredentials()
+          if (apiKey && host) {
+            const MeilisearchClient = await import('meilisearch').then(m => m.MeiliSearch)
+            const client = new MeilisearchClient({ apiKey, host })
+
+            for (const taskUid of taskUids) {
+              try {
+                const taskResponse = await client.getTasks({ uids: [taskUid] })
+                if (taskResponse.results && taskResponse.results[0]) {
+                  const task = taskResponse.results[0]
+                  taskDetails.push({
+                    uid: taskUid,
+                    status: task.status,
+                    type: task.type,
+                    documentsProcessed: task.details?.receivedDocuments || 0,
+                    duration: task.duration ? `${task.duration}ms` : 'pending'
+                  })
+                }
+              } catch (e) {
+                // Skip if we can't fetch task details
+              }
+            }
+          }
+        }
+
+        ctx.body = {
+          data: taskUids,
+          taskDetails: taskDetails
+        }
+      } catch (e) {
+        ctx.body = await error.createError(e)
+      }
     },
 
     /**

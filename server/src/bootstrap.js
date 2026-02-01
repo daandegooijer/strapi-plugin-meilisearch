@@ -7,11 +7,20 @@
  */
 async function subscribeToLifecycles({ lifecycle, store }) {
   const contentTypes = await store.getIndexedContentTypes()
-  await store.emptyListenedContentTypes()
+  strapi.log.debug(`[meilisearch] subscribeToLifecycles: Found ${contentTypes.length} indexed content types`)
+
   let lifecycles
   for (const contentType of contentTypes) {
+    strapi.log.debug(`[meilisearch] subscribeToLifecycles: Subscribing to lifecycle for ${contentType}`)
     lifecycles = await lifecycle.subscribeContentType({ contentType })
   }
+
+  // Set all listened content types at once after subscribing
+  strapi.log.debug(`[meilisearch] subscribeToLifecycles: Setting listened content types: ${JSON.stringify(contentTypes)}`)
+  await store.setListenedContentTypes({ contentTypes })
+
+  const saved = await store.getListenedContentTypes()
+  strapi.log.debug(`[meilisearch] subscribeToLifecycles: Verified saved listened content types: ${JSON.stringify(saved)}`)
 
   return lifecycles
 }
@@ -31,21 +40,46 @@ async function syncIndexedCollections({
   meilisearch,
 }) {
   const indexUids = await meilisearch.getIndexUids()
-  // All indexed contentTypes
+  // If no indexes found and we have credentials, skip sync (Meilisearch might not be accessible)
+  if (indexUids.length === 0) {
+    return
+  }
+
+  // All indexed contentTypes from the store
   const indexedContentTypes = await store.getIndexedContentTypes()
-  const contentTypes = contentTypeService.getContentTypesUid()
 
-  for (const contentType of contentTypes) {
-    const contentTypeIndexUids = await meilisearch.getIndexNamesOfContentType({
-      contentType,
-    })
-    const indexesInMeiliSearch = contentTypeIndexUids.some(indexUid =>
-      indexUids.includes(indexUid),
-    )
-    const contentTypeInIndexStore = indexedContentTypes.includes(contentType)
+  // Get Meilisearch client
+  const credentials = await store.getCredentials()
+  if (!credentials.apiKey || !credentials.host) {
+    return
+  }
 
-    // Remove any collection that is not in Meilisearch anymore
-    if (!indexesInMeiliSearch && contentTypeInIndexStore) {
+  for (const contentType of indexedContentTypes) {
+    let foundDocuments = false
+
+    try {
+      for (const indexUid of indexUids) {
+        const searchResult = await meilisearch
+          .index(indexUid)
+          .search('', {
+            filter: [`_contentType = "${contentType}"`],
+            limit: 0,
+          })
+
+        if (searchResult.estimatedTotalHits > 0) {
+          foundDocuments = true
+          break
+        }
+      }
+    } catch (e) {
+      strapi.log.debug(`[meilisearch] syncIndexedCollections: Could not search for ${contentType}: ${e.message}`)
+      // Don't remove if we can't verify
+      continue
+    }
+
+    // Remove from store if no documents found
+    if (!foundDocuments) {
+      strapi.log.debug(`[meilisearch] syncIndexedCollections: Removing ${contentType} - no documents found in any index`)
       await store.removeIndexedContentType({ contentType })
     }
   }
@@ -96,21 +130,27 @@ const registerPermissionActions = async () => {
 }
 
 export default async ({ strapi }) => {
-  const store = strapi.plugin('meilisearch').service('store')
-  const lifecycle = strapi.plugin('meilisearch').service('lifecycle')
-  const meilisearch = strapi.plugin('meilisearch').service('meilisearch')
-  const contentTypeService = strapi.plugin('meilisearch').service('contentType')
+  try {
+    const store = strapi.plugin('meilisearch').service('store')
+    const lifecycle = strapi.plugin('meilisearch').service('lifecycle')
+    const meilisearch = strapi.plugin('meilisearch').service('meilisearch')
+    const contentTypeService = strapi.plugin('meilisearch').service('contentType')
 
-  // Sync credentials between store and plugin config file
-  await store.syncCredentials()
-  await syncIndexedCollections({
-    store,
-    contentTypeService,
-    meilisearch,
-  })
-  await subscribeToLifecycles({
-    lifecycle,
-    store,
-  })
-  await registerPermissionActions()
+    // Sync credentials between store and plugin config file
+    await store.syncCredentials()
+    await syncIndexedCollections({
+      store,
+      contentTypeService,
+      meilisearch,
+    })
+
+    await subscribeToLifecycles({
+      lifecycle,
+      store,
+    })
+    await registerPermissionActions()
+  } catch (error) {
+    strapi.log.error('Error during Meilisearch plugin bootstrap:', error)
+  }
 }
+
