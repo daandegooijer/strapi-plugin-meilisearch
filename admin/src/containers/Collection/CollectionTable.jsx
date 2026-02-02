@@ -21,6 +21,7 @@ const Collection = () => {
     deleteCollection,
     addCollection,
     updateCollection,
+    syncCollection,
     reloadNeeded,
     refetchCollection,
   } = useCollection()
@@ -162,9 +163,26 @@ const Collection = () => {
               <strong>42 / 100</strong> <span style={{color: '#F59E0B'}}>42% synced</span> — {i18n('plugin.legend.syncing', 'Indexing is in progress')}
             </Typography>
           </Box>
-          <Box>
+          <Box marginBottom={6}>
             <Typography size="sm">
               <strong>42 / 34</strong> <span style={{color: '#DC2626'}}>⚠ Orphaned documents</span> — {i18n('plugin.legend.orphaned', 'More documents in Meilisearch than in database')}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* ACTIONS Section */}
+        <Box>
+          <Typography variant="sigma" textColor="neutral600" marginBottom={3}>
+            {i18n('plugin.legend.actions', 'ACTIONS')}
+          </Typography>
+          <Box marginBottom={3}>
+            <Typography size="sm">
+              <strong>{i18n('plugin.update', 'Update')}</strong> — {i18n('plugin.legend.update', 'Sync & refresh the index with the latest entries without deleting existing data. Faster than reindex.')}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography size="sm">
+              <strong>{i18n('plugin.reindex', 'Reindex')}</strong> — {i18n('plugin.legend.reindex', 'Full rebuild: delete all indexed documents for this content type and reindex everything from scratch. Use this to fix inconsistencies.')}
             </Typography>
           </Box>
         </Box>
@@ -180,12 +198,13 @@ const Collection = () => {
               deleteCollection={deleteCollection}
               addCollection={addCollection}
               updateCollection={updateCollection}
+              syncCollection={syncCollection}
             />
           ))}
         </Tbody>
       </Table>
       {reloadNeeded && (
-        
+
         <Box padding={5}>
 
           <Alert

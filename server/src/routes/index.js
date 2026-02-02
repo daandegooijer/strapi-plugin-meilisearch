@@ -62,6 +62,22 @@ export default [
     },
   },
   {
+    method: 'POST',
+    path: '/content-type/sync',
+    handler: 'contentTypeController.syncContentType',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        {
+          name: 'admin::hasPermissions',
+          config: {
+            actions: [ACTIONS.update],
+          },
+        },
+      ],
+    },
+  },
+  {
     method: 'DELETE',
     path: '/content-type/:contentType',
     handler: 'contentTypeController.removeContentType',

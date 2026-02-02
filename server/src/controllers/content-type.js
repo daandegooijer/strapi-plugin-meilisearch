@@ -93,6 +93,26 @@ export default ({ strapi }) => {
     },
 
     /**
+     * Sync/update a contentType in Meilisearch without deleting existing documents.
+     *
+     * @param  {object} ctx - Http request object.
+     *
+     */
+    async syncContentType(ctx) {
+      const { contentType } = ctx.request.body
+      await meilisearch
+        .syncContentTypeInMeiliSearch({
+          contentType,
+        })
+        .then(taskUids => {
+          ctx.body = { data: taskUids }
+        })
+        .catch(async e => {
+          ctx.body = await error.createError(e)
+        })
+    },
+
+    /**
      * Remove or empty a contentType from Meilisearch
      *
      * @param  {object} ctx - Http request object.

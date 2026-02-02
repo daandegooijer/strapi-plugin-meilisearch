@@ -150,12 +150,54 @@ export function useCollection() {
           link: error.link,
         })
       } else {
+        // Enable real-time polling while tasks are being processed
+        setRealTimeReports(true)
+
+        // Wait a bit before showing success to ensure first refresh happens
+        await new Promise(resolve => setTimeout(resolve, 500))
+
         refetchCollection()
         handleNotification({
           type: 'success',
           message: i18n(
             'plugin.message.success.update',
             'Request to update content-type is successful',
+          ),
+          blockTransition: false,
+        })
+      }
+    } catch (error) {
+      checkForbiddenError(error)
+    }
+  }
+
+  const syncCollection = async ({ contentType }) => {
+    try {
+      const {
+        data: { error },
+      } = await post(`/${pluginId}/content-type/sync`, {
+        contentType,
+      })
+
+      if (error) {
+        handleNotification({
+          type: 'warning',
+          message: error.message,
+          link: error.link,
+        })
+      } else {
+        // Enable real-time polling while tasks are being processed
+        setRealTimeReports(true)
+
+        // Wait a bit before showing success to ensure first refresh happens
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        refetchCollection()
+        handleNotification({
+          type: 'success',
+          message: i18n(
+            'plugin.message.success.sync',
+            'Request to sync content-type is successful',
           ),
           blockTransition: false,
         })
@@ -187,6 +229,7 @@ export function useCollection() {
     deleteCollection,
     addCollection,
     updateCollection,
+    syncCollection,
     reloadNeeded,
     refetchCollection,
     handleNotification,

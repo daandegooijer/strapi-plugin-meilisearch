@@ -24,6 +24,7 @@ const CollectionColumn = ({
   deleteCollection,
   addCollection,
   updateCollection,
+  syncCollection,
 }) => {
   const { i18n } = useI18n()
   const [isLoading, setIsLoading] = useState(false)
@@ -50,7 +51,7 @@ const CollectionColumn = ({
   const handleUpdate = async () => {
     setIsLoading(true)
     try {
-      await updateCollection({ contentType: entry.contentType })
+      await syncCollection({ contentType: entry.contentType })
     } finally {
       setIsLoading(false)
     }
@@ -228,7 +229,7 @@ const CollectionColumn = ({
             <Flex gap={1}>
               {entry.indexed && (
                 <>
-                  <Tooltip description={i18n('plugin.table.btn.update-tooltip', 'Re-index all content')}>
+                  <Tooltip description={i18n('plugin.table.btn.update-tooltip', 'Sync & refresh the index with latest entries (without deleting)')}>
                     <Button
                       onClick={handleUpdate}
                       size="S"
@@ -241,7 +242,7 @@ const CollectionColumn = ({
                         : i18n('plugin.update', 'Update')}
                     </Button>
                   </Tooltip>
-                  <Tooltip description={i18n('plugin.table.btn.reindex-tooltip', 'Delete all records and fully reindex this content type')}>
+                  <Tooltip description={i18n('plugin.table.btn.reindex-tooltip', 'Full rebuild: delete all documents and reindex from scratch')}>
                     <Button
                       onClick={() => setShowReindexModal(true)}
                       size="S"

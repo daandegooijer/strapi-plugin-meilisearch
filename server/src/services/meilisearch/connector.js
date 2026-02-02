@@ -536,6 +536,110 @@ export default ({ strapi, adapter, config }) => {
     },
 
     /**
+     * Update/sync entries from a contentType to its index in Meilisearch without deleting.
+     * This is a lightweight sync that just adds/updates documents without removing existing ones.
+     *
+     * @param  {object} options
+     * @param  {string} options.contentType - ContentType name.
+     *
+     * @returns {Promise<number[]>} - All tasks uid from the sync process.
+     */
+    syncContentTypeInMeiliSearch: async function ({ contentType }) {
+      strapi.log.info(`[meilisearch] syncContentTypeInMeiliSearch: Starting sync (without delete) for ${contentType}`)
+
+      const { apiKey, host } = await store.getCredentials()
+      strapi.log.debug(`[meilisearch] syncContentTypeInMeiliSearch: Got credentials - host="${host}", hasApiKey=${!!apiKey}`)
+
+      if (!host || !apiKey) {
+        strapi.log.warn(`[meilisearch] syncContentTypeInMeiliSearch: Empty credentials, cannot sync ${contentType}`)
+        return []
+      }
+
+      const client = Meilisearch({ apiKey, host })
+      if (!client) {
+        strapi.log.warn(`[meilisearch] syncContentTypeInMeiliSearch: Failed to create Meilisearch client for ${contentType}`)
+        return []
+      }
+
+      const indexUids = await getIndexNamesOfContentType({ contentType })
+      strapi.log.info(`[meilisearch] syncContentTypeInMeiliSearch: Found ${indexUids.length} indexes for ${contentType}: ${indexUids.join(', ')}`)
+
+      // Get Meilisearch Index settings from model
+      const settings = config.getSettings({ contentType })
+      await Promise.all(
+        indexUids.map(async indexUid => {
+          const task = await client.index(indexUid).updateSettings(settings)
+          strapi.log.info(
+            `A task to update the settings to the Meilisearch index "${indexUid}" has been enqueued (Task uid: ${task.taskUid}).`,
+          )
+          return task
+        }),
+      )
+
+      // Callback function for batching action
+      const addDocuments = async ({ entries, contentType }) => {
+        strapi.log.info(`[meilisearch] syncContentTypeInMeiliSearch CALLBACK: Processing batch of ${entries.length} entries for ${contentType}`)
+
+        // Sanitize entries
+        const documents = await sanitizeEntries({
+          contentType,
+          entries,
+          config,
+          adapter,
+        })
+
+        strapi.log.info(`[meilisearch] syncContentTypeInMeiliSearch CALLBACK: Sanitized to ${documents.length} documents`)
+
+        if (documents.length === 0) {
+          strapi.log.warn(`[meilisearch] syncContentTypeInMeiliSearch CALLBACK: No documents to add after sanitization for ${contentType}`)
+          return []
+        }
+
+        // Add documents in Meilisearch (will update existing ones automatically)
+        const taskUids = await Promise.all(
+          indexUids.map(async indexUid => {
+            strapi.log.info(`[meilisearch] syncContentTypeInMeiliSearch CALLBACK: Syncing ${documents.length} documents to index "${indexUid}"`)
+
+            const response = await client
+              .index(indexUid)
+              .addDocuments(documents, { primaryKey: '_meilisearch_id' })
+
+            const { taskUid } = response
+
+            strapi.log.info(
+              `A task to sync ${documents.length} documents to the Meilisearch index "${indexUid}" has been enqueued (Task uid: ${taskUid}).`,
+            )
+
+            return taskUid
+          }),
+        )
+
+        strapi.log.info(`[meilisearch] syncContentTypeInMeiliSearch CALLBACK: Returning ${taskUids.flat().length} task UIDs`)
+
+        return taskUids.flat()
+      }
+
+      // Call actionInBatches with the callback
+      const entriesQuery = config.entriesQuery({ contentType })
+      strapi.log.debug(`[meilisearch] syncContentTypeInMeiliSearch: entriesQuery for ${contentType}: ${JSON.stringify(entriesQuery)}`)
+
+      const tasksUids = await contentTypeService.actionInBatches({
+        contentType,
+        callback: addDocuments,
+        entriesQuery,
+      })
+
+      strapi.log.info(`[meilisearch] syncContentTypeInMeiliSearch: Completed sync ${contentType}, returned ${tasksUids.length} task UIDs: ${tasksUids.join(', ')}`)
+
+      // Log task details for visibility
+      if (tasksUids.length > 0) {
+        await logTaskDetails({ client, taskUids: tasksUids, contentType })
+      }
+
+      return tasksUids
+    },
+
+    /**
      * Search for the list of all contentTypes that share the same index name.
      *
      * @param  {object} options
@@ -583,44 +687,51 @@ export default ({ strapi, adapter, config }) => {
      * @param  {string} options.contentType - ContentType name.
      */
     emptyOrDeleteIndex: async function ({ contentType }) {
-      const indexedContentTypesWithSameIndex =
-        await this.getContentTypesWithSameIndex({
-          contentType,
-        })
-      if (indexedContentTypesWithSameIndex.length > 1) {
-        const deleteEntries = async ({ entries, contentType }) => {
-          await this.deleteEntriesFromMeiliSearch({
-            contentType,
-            entriesId: entries.map(entry => entry.documentId),
-          })
-        }
-        await contentTypeService.actionInBatches({
-          contentType,
-          callback: deleteEntries,
-          entriesQuery: config.entriesQuery({ contentType }),
-        })
-      } else {
-        const { apiKey, host } = await store.getCredentials()
+      const { apiKey, host } = await store.getCredentials()
 
-        // Guard: do not proceed if credentials are not configured
-        if (!host || !apiKey) {
-          await store.removeIndexedContentType({ contentType })
-          return
-        }
-
-        const client = Meilisearch({ apiKey, host })
-
-        const indexUids = await getIndexNamesOfContentType({ contentType })
-        await Promise.all(
-          indexUids.map(async indexUid => {
-            const { taskUid } = await client.index(indexUid).delete()
-            strapi.log.info(
-              `A task to delete the Meilisearch index "${indexUid}" has been added to the queue (Task uid: ${taskUid}).`,
-            )
-            return taskUid
-          }),
-        )
+      // Guard: do not proceed if credentials are not configured
+      if (!host || !apiKey) {
+        await store.removeIndexedContentType({ contentType })
+        return
       }
+
+      const client = Meilisearch({ apiKey, host })
+      const indexUids = await getIndexNamesOfContentType({ contentType })
+
+      // Always use selective deletion by _contentType to preserve other content types
+      await Promise.all(
+        indexUids.map(async indexUid => {
+          try {
+            // Search for documents with this content type to get their IDs
+            const searchResult = await client
+              .index(indexUid)
+              .search('', {
+                filter: [`_contentType = "${contentType}"`],
+                limit: 10000, // Get all matching documents
+              })
+
+            const documentIds = searchResult.hits.map(hit => hit._meilisearch_id)
+
+            if (documentIds.length > 0) {
+              const task = await client
+                .index(indexUid)
+                .deleteDocuments(documentIds)
+
+              strapi.log.info(
+                `A task to delete ${documentIds.length} documents with _contentType="${contentType}" from index "${indexUid}" has been enqueued (Task uid: ${task.taskUid}).`,
+              )
+            } else {
+              strapi.log.info(
+                `No documents found with _contentType="${contentType}" in index "${indexUid}".`,
+              )
+            }
+          } catch (e) {
+            strapi.log.error(
+              `Error deleting documents for ${contentType} from index ${indexUid}: ${e.message}`,
+            )
+          }
+        }),
+      )
 
       await store.removeIndexedContentType({ contentType })
     },
