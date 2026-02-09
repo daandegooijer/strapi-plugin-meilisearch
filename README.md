@@ -2,52 +2,75 @@
   <img src="https://raw.githubusercontent.com/meilisearch/integration-guides/main/assets/logos/meilisearch_strapi.svg" alt="Meilisearch-Strapi" width="200" height="200" />
 </p>
 
-<h1 align="center">Meilisearch Strapi Plugin</h1>
+<h1 align="center">Meilisearch Strapi Plugin - Fork</h1>
 
 <h4 align="center">
-  <a href="https://github.com/meilisearch/meilisearch">Meilisearch</a> |
-  <a href="https://www.meilisearch.com/cloud?utm_campaign=oss&utm_source=github&utm_medium=strapi-plugin-meilisearch">Meilisearch Cloud</a> |
-  <a href="https://www.meilisearch.com/docs">Documentation</a> |
-  <a href="https://discord.meilisearch.com">Discord</a> |
-  <a href="https://roadmap.meilisearch.com/tabs/1-under-consideration">Roadmap</a> |
-  <a href="https://www.meilisearch.com">Website</a> |
-  <a href="https://www.meilisearch.com/docs/faq">FAQ</a>
+  <a href="https://github.com/daandegooijer/strapi-plugin-meilisearch">Fork Repository</a> |
+  <a href="https://github.com/protofrak/strapi-plugin-meilisearch">Original Repository</a> |
+  <a href="https://www.meilisearch.com">Meilisearch</a> |
+  <a href="https://www.meilisearch.com/docs">Documentation</a>
 </h4>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/strapi-plugin-meilisearch"><img src="https://img.shields.io/npm/v/strapi-plugin-meilisearch.svg" alt="npm version"></a>
-  <a href="https://github.com/meilisearch/strapi-plugin-meilisearch/actions"><img src="https://github.com/meilisearch/strapi-plugin-meilisearch/workflows/Tests/badge.svg" alt="Tests"></a>
+  <a href="https://www.npmjs.com/package/strapi-plugin-meilisearch-fork"><img src="https://img.shields.io/npm/v/strapi-plugin-meilisearch-fork.svg" alt="npm version"></a>
   <a href="https://github.com/prettier/prettier"><img src="https://img.shields.io/badge/styled_with-prettier-ff69b4.svg" alt="Prettier"></a>
-  <a href="https://github.com/meilisearch/strapi-plugin-meilisearch/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-informational" alt="License"></a>
+  <a href="https://github.com/daandegooijer/strapi-plugin-meilisearch/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-informational" alt="License"></a>
 </p>
 
-<p align="center">⚡ The Meilisearch plugin for Strapi</p>
+<p align="center">⚡ Enhanced Meilisearch plugin for Strapi with Admin UI Index Settings Management</p>
 
-Meilisearch is an open-source search engine. [Discover what Meilisearch is!](https://github.com/meilisearch/meilisearch)
+> **Fork Notice:** This is an enhanced fork of [strapi-plugin-meilisearch](https://github.com/protofrak/strapi-plugin-meilisearch) with added features for managing Meilisearch index settings directly from the Strapi admin panel.
 
-Add your Strapi content-types into a Meilisearch instance. The plugin listens to modifications made on your content-types and updates Meilisearch accordingly.
+## Table of Contents
 
-## Table of Contents <!-- omit in TOC -->
+- [What's New in This Fork](#whats-new-in-this-fork)
+- [Features](#features)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [API Endpoints](#api-endpoints)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
 
-- [📖 Documentation](#-documentation)
-- [🔧 Installation](#-installation)
-- [🚀 Getting started](#-getting-started)
-- [💅 Customization](#-customization)
-- [💡 Run the Playground](#-run-the-playground)
-- [🤖 Compatibility with Meilisearch and Strapi](#-compatibility-with-meilisearch-and-strapi)
-- [⚙️ Development Workflow and Contributing](#️-development-workflow-and-contributing)
-- [🌎 Community support](#-community-support)
-- [🤩 Just for the pleasure of the eyes](#-just-for-the-pleasure-of-the-eyes)
+## What's New in This Fork
 
-## 📖 Documentation
+This fork extends the original plugin with powerful admin UI features for managing Meilisearch index settings:
 
-To understand Meilisearch and how it works, see the [Meilisearch's documentation](https://www.meilisearch.com/docs/learn/getting_started/installation).
+### 🎨 Index Settings Admin Interface
 
-To understand Strapi and how to create an app, see [Strapi's documentation](https://strapi.io/documentation/developer-docs/latest/getting-started/introduction.html).
+A dedicated admin panel for configuring Meilisearch settings without code changes:
 
-## 🔧 Installation
+- **Visual UI:** Organize settings by content-type with tabbed interface
+- **Filterable Attributes:** Choose which fields support filtering
+- **Sortable Attributes:** Choose which fields support sorting
+- **Pagination:** Configure max total hits per search
 
-This package version works with the [v5 of Strapi](https://docs.strapi.io/dev-docs/intro). If you are using [Strapi v4](https://docs-v4.strapi.io/), refer to versions under [`v0.12`](https://github.com/meilisearch/strapi-plugin-meilisearch/tree/v0.12.0), if you are using [Strapi v3](https://docs-v3.strapi.io/), consider [this README](https://github.com/meilisearch/strapi-plugin-meilisearch/tree/v3_main).
+### 🔍 Key Improvements
+
+- ✅ Persistent settings stored in Strapi database
+- ✅ Automatic application to all configured indexes
+- ✅ Real-time updates without server restart
+- ✅ Unified settings model (merged across content-types)
+- ✅ Minimal logging to keep info logs clean
+
+## Features
+
+### Original Features (from strapi-plugin-meilisearch)
+
+- Automatic indexing of Strapi content-types to Meilisearch
+- Real-time synchronization on create, update, delete operations
+- Customizable transformation of entries before indexing
+- Support for multiple indexes per content-type
+- Locale support with configurable entry queries
+
+### New Features in This Fork
+
+- **Index Settings UI** - Manage all settings visually in admin panel
+- **Filterable Attributes Management** - Set searchable/filterable fields
+- **Sortable Attributes Management** - Choose which fields can be sorted
+- **Max Total Hits Configuration** - Control pagination limits
+- **Automatic Settings Application** - Apply changes to all indexes instantly
+- **Persistent Settings** - Settings survive server restarts
 
 Inside your Strapi app, add the package:
 
@@ -75,7 +98,7 @@ You will need both a running Strapi app and a running Meilisearch instance. For 
 
 ⚡️ **Launch, scale, and streamline in minutes with Meilisearch Cloud**—no maintenance, no commitment, cancel anytime. [Try it free now](https://cloud.meilisearch.com/login?utm_campaign=oss&utm_source=github&utm_medium=strapi-plugin-meilisearch).
 
-🪨  Prefer to self-host? [Download and deploy](https://www.meilisearch.com/docs/learn/self_hosted/getting_started_with_self_hosted_meilisearch?utm_campaign=oss&utm_source=github&utm_medium=strapi-plugin-meilisearch) our fast, open-source search engine on your own infrastructure.
+🪨 Prefer to self-host? [Download and deploy](https://www.meilisearch.com/docs/learn/self_hosted/getting_started_with_self_hosted_meilisearch?utm_campaign=oss&utm_source=github&utm_medium=strapi-plugin-meilisearch) our fast, open-source search engine on your own infrastructure.
 
 ### 🏃‍♂️ Run Strapi <!-- omit in toc -->
 

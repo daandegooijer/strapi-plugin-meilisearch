@@ -17474,9 +17474,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"strapi-plugin-meilisearch@workspace:.":
+"strapi-plugin-meilisearch-fork@workspace:.":
   version: 0.0.0-use.local
-  resolution: "strapi-plugin-meilisearch@workspace:."
+  resolution: "strapi-plugin-meilisearch-fork@workspace:."
   dependencies:
     "@babel/core": "npm:^7.26.7"
     "@babel/preset-env": "npm:^7.26.7"
