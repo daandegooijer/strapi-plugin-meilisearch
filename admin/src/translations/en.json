@@ -62,5 +62,21 @@
   "plugin.message.success.credentials": "Credentials successfully updated!",
   "plugin.message.something": "Something occurred in Meilisearch",
   "plugin.message.forbidden.title": "Forbidden",
-  "plugin.message.forbidden.description": "You do not have permission to do this action"
+  "plugin.message.forbidden.description": "You do not have permission to do this action",
+  "plugin.index-settings": "Index Settings",
+  "plugin.pagination-settings": "Pagination Settings",
+  "plugin.max-total-hits": "Max Total Hits",
+  "plugin.max-total-hits-hint": "Maximum number of documents returned by Meilisearch. Increase for large databases.",
+  "plugin.attributes-settings": "Attribute Settings",
+  "plugin.content-types": "Content Types",
+  "plugin.filterable-attributes": "Filterable Attributes",
+  "plugin.sortable-attributes": "Sortable Attributes",
+  "plugin.no-fields": "No fields available",
+  "plugin.save-settings": "Save Settings",
+  "plugin.settings-saved": "Index settings saved successfully",
+  "plugin.error-loading-settings": "Failed to load index settings",
+  "plugin.error-saving": "Failed to save settings",
+  "plugin.saving": "Saving...",
+  "plugin.error": "Error",
+  "plugin.legend.title": "Legend"
 }

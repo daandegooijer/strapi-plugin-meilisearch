@@ -47,20 +47,12 @@ export function useCollection() {
           })
           return collection
         })
-        const reload = collections.find(
-          col =>
-            col.reloadNeeded ===
-            i18n('plugin.table.td.hookingText.reload', 'Reload needed'),
-        )
 
         const isIndexing = collections.find(col => col.isIndexing === true)
 
         if (!isIndexing) setRealTimeReports(false)
         else setRealTimeReports(true)
 
-        if (reload) {
-          setReloadNeeded(true)
-        } else setReloadNeeded(false)
         setCollections(collections)
       }
     } catch (error) {

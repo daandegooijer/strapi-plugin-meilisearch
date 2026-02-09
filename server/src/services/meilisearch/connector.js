@@ -92,6 +92,41 @@ const sanitizeEntries = async function ({
   return entries
 }
 
+/**
+ * Ensure that index settings are applied, particularly the protected _contentType filterable attribute.
+ * This is called before any indexing operation to ensure the index is properly configured.
+ *
+ * @param  {object} options
+ * @param  {object} options.client - Meilisearch client
+ * @param  {string} options.indexUid - Index UID
+ * @param  {string} options.contentType - ContentType name
+ * @param  {object} options.config - Configuration service
+ * @returns {Promise<void>}
+ */
+const ensureIndexSettings = async function ({
+  client,
+  indexUid,
+  contentType,
+  config,
+}) {
+  try {
+    const settings = await config.getSettings({ contentType })
+    strapi.log.debug(`[meilisearch] ensureIndexSettings: Applying settings to index "${indexUid}" for content type "${contentType}"`)
+    strapi.log.debug(`[meilisearch] ensureIndexSettings: Settings to apply: ${JSON.stringify(settings)}`)
+
+    const task = await client.index(indexUid).updateSettings(settings)
+    strapi.log.debug(`[meilisearch] ensureIndexSettings: Task enqueued with uid: ${task.taskUid}`)
+
+    // Wait for the task to complete before returning
+    await client.waitForTask(task.taskUid)
+
+    strapi.log.debug(`[meilisearch] ensureIndexSettings: Successfully applied settings to index "${indexUid}" (Task uid: ${task.taskUid})`)
+  } catch (e) {
+    strapi.log.error(`[meilisearch] ensureIndexSettings: Could not apply settings to index "${indexUid}": ${e.message}`)
+    strapi.log.error(e)
+  }
+}
+
 export default ({ strapi, adapter, config }) => {
   const store = strapi.plugin('meilisearch').service('store')
   const contentTypeService = strapi.plugin('meilisearch').service('contentType')
@@ -170,6 +205,19 @@ export default ({ strapi, adapter, config }) => {
       const client = Meilisearch({ apiKey, host })
 
       const indexUids = await getIndexNamesOfContentType({ contentType })
+
+      // Ensure index settings are applied (particularly _contentType filterable attribute)
+      await Promise.all(
+        indexUids.map(async indexUid => {
+          await ensureIndexSettings({
+            client,
+            indexUid,
+            contentType,
+            config,
+          })
+        }),
+      )
+
       const documentsIds = entriesId.map(entryId =>
         adapter.addCollectionNamePrefixToId({ entryId, contentType }),
       )
@@ -220,6 +268,18 @@ export default ({ strapi, adapter, config }) => {
         config,
         adapter,
       })
+
+      // Ensure index settings are applied (particularly _contentType filterable attribute)
+      await Promise.all(
+        indexUids.map(async indexUid => {
+          await ensureIndexSettings({
+            client,
+            indexUid,
+            contentType,
+            config,
+          })
+        }),
+      )
 
       // Check which documents are not in sanitized documents and need to be deleted
       const deleteDocuments = entries.filter(
@@ -370,27 +430,25 @@ export default ({ strapi, adapter, config }) => {
               let numberOfDocuments = 0
               let isIndexing = false
 
-              if (indexUids.includes(indexUid)) {
-                const { apiKey, host } = await store.getCredentials()
-                if (apiKey && host) {
-                  const client = Meilisearch({ apiKey, host })
-                  try {
-                    // Search for documents with this content type
-                    const searchResult = await client
-                      .index(indexUid)
-                      .search('', {
-                        filter: [`_contentType = "${contentType}"`],
-                        limit: 0, // We only need the total count
-                      })
-                    numberOfDocuments = searchResult.estimatedTotalHits || 0
+              const { apiKey, host } = await store.getCredentials()
+              if (apiKey && host) {
+                const client = Meilisearch({ apiKey, host })
+                try {
+                  // Search for documents with this content type
+                  const searchResult = await client
+                    .index(indexUid)
+                    .search('', {
+                      filter: [`_contentType = "${contentType}"`],
+                      limit: 0, // We only need the total count
+                    })
+                  numberOfDocuments = searchResult.estimatedTotalHits || 0
 
-                    // Also get isIndexing status from index stats
-                    const stats = await this.getStats({ indexUid })
-                    isIndexing = stats.isIndexing || false
-                  } catch (e) {
-                    strapi.log.debug(`[meilisearch] getContentTypesReport: Could not fetch doc count for ${contentType} in ${indexUid}: ${e.message}`)
-                    numberOfDocuments = 0
-                  }
+                  // Also get isIndexing status from index stats
+                  const stats = await this.getStats({ indexUid })
+                  isIndexing = stats.isIndexing || false
+                } catch (e) {
+                  strapi.log.debug(`[meilisearch] getContentTypesReport: Could not fetch doc count for ${contentType} in ${indexUid}: ${e.message}`)
+                  numberOfDocuments = 0
                 }
               }
 
@@ -458,13 +516,19 @@ export default ({ strapi, adapter, config }) => {
       strapi.log.info(`[meilisearch] addContentTypeInMeiliSearch: Found ${indexUids.length} indexes for ${contentType}: ${indexUids.join(', ')}`)
 
       // Get Meilisearch Index settings from model
-      const settings = config.getSettings({ contentType })
+      const settings = await config.getSettings({ contentType })
+      strapi.log.info(`[meilisearch] addContentTypeInMeiliSearch: Applying settings with filterableAttributes: ${JSON.stringify(settings.filterableAttributes)}`)
+
+      // Wait for all settings tasks to complete before indexing
       await Promise.all(
         indexUids.map(async indexUid => {
           const task = await client.index(indexUid).updateSettings(settings)
           strapi.log.info(
             `A task to update the settings to the Meilisearch index "${indexUid}" has been enqueued (Task uid: ${task.taskUid}).`,
           )
+          // Wait for the settings task to complete
+          await client.waitForTask(task.taskUid)
+          strapi.log.info(`[meilisearch] addContentTypeInMeiliSearch: Settings task ${task.taskUid} completed for index "${indexUid}"`)
           return task
         }),
       )
@@ -565,13 +629,16 @@ export default ({ strapi, adapter, config }) => {
       strapi.log.info(`[meilisearch] syncContentTypeInMeiliSearch: Found ${indexUids.length} indexes for ${contentType}: ${indexUids.join(', ')}`)
 
       // Get Meilisearch Index settings from model
-      const settings = config.getSettings({ contentType })
+      const settings = await config.getSettings({ contentType })
       await Promise.all(
         indexUids.map(async indexUid => {
           const task = await client.index(indexUid).updateSettings(settings)
           strapi.log.info(
             `A task to update the settings to the Meilisearch index "${indexUid}" has been enqueued (Task uid: ${task.taskUid}).`,
           )
+          // Wait for the settings task to complete
+          await client.waitForTask(task.taskUid)
+          strapi.log.info(`[meilisearch] syncContentTypeInMeiliSearch: Settings task ${task.taskUid} completed for index "${indexUid}"`)
           return task
         }),
       )

@@ -101,4 +101,41 @@ export default [
       policies: ['admin::isAuthenticatedAdmin'],
     },
   },
+  {
+    method: 'GET',
+    path: '/index-settings/content-types',
+    handler: 'indexSettingsController.getContentTypesAndFields',
+    config: {
+      policies: ['admin::isAuthenticatedAdmin'],
+    },
+  },
+  {
+    method: 'POST',
+    path: '/index-settings/save',
+    handler: 'indexSettingsController.saveIndexSettings',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        {
+          name: 'admin::hasPermissions',
+          config: { actions: [ACTIONS.settings] },
+        },
+      ],
+    },
+  },
+  {
+    method: 'POST',
+    path: '/index-settings/apply',
+    handler: 'indexSettingsController.applySettingsToIndexes',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        {
+          name: 'admin::hasPermissions',
+          config: { actions: [ACTIONS.settings] },
+        },
+      ],
+    },
+  },
 ]
+

@@ -38,7 +38,7 @@ export default ({ strapi }) => {
           // Pass locale from lifecycle result to maintain i18n consistency.
           // Status 'published' ensures we only index published content to Meilisearch.
           await meilisearch
-            .addEntriesToMeilisearch({
+            .updateEntriesInMeilisearch({
               contentType: contentTypeUid,
               entries: [entry],
             })

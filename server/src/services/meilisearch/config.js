@@ -18,6 +18,8 @@ const aborted = ({ contentType, action }) => {
 export default ({ strapi }) => {
   const meilisearchConfig = strapi.config.get('plugin::meilisearch') || {}
   const contentTypeService = strapi.plugin('meilisearch').service('contentType')
+  const store = strapi.plugin('meilisearch').service('store')
+
   return {
     /**
      * Get the names of the indexes from Meilisearch in which the contentType content is added.
@@ -149,11 +151,53 @@ export default ({ strapi }) => {
      * @type {import('meilisearch').Settings}
      * @return {Settings} - Meilisearch index settings
      */
-    getSettings: function ({ contentType }) {
+    getSettings: async function ({ contentType }) {
       const collection = contentTypeService.getCollectionName({ contentType })
       const contentTypeConfig = meilisearchConfig[collection] || {}
 
-      const settings = contentTypeConfig.settings || {}
+      const userSettings = contentTypeConfig.settings || {}
+
+      // Default settings with _contentType as filterable attribute
+      const defaultFilterableAttributes = ['_contentType']
+      let userFilterableAttributes = []
+      let sortableAttributes = []
+      let maxTotalHits = 1000
+
+      // Load merged settings if available
+      try {
+        const storedSettings = await store.getStoreKey({
+          key: 'meilisearch-index-settings',
+        })
+        if (storedSettings) {
+          userFilterableAttributes = storedSettings.filterableAttributes || []
+          sortableAttributes = storedSettings.sortableAttributes || []
+          strapi.log.info(`[meilisearch] Loaded stored index settings: filterable=[${userFilterableAttributes.join(', ')}], sortable=[${sortableAttributes.join(', ')}]`)
+        }
+
+        const storedMaxHits = await store.getStoreKey({
+          key: 'meilisearch-max-total-hits',
+        })
+        if (storedMaxHits) {
+          maxTotalHits = storedMaxHits || 1000
+          strapi.log.info(`[meilisearch] Loaded stored maxTotalHits: ${maxTotalHits}`)
+        }
+      } catch (e) {
+        strapi.log.debug(`[meilisearch] getSettings: Could not load stored settings: ${e.message}`)
+      }
+
+      // Merge filterable attributes, ensuring _contentType is always included
+      const filterableAttributes = [
+        ...new Set([...defaultFilterableAttributes, ...userFilterableAttributes])
+      ]
+
+      const settings = {
+        ...userSettings,
+        filterableAttributes,
+        ...(sortableAttributes.length > 0 ? { sortableAttributes } : {}),
+        ...(maxTotalHits ? { pagination: { maxTotalHits } } : {}),
+      }
+
+      strapi.log.debug(`[meilisearch] getSettings for ${contentType}: returning ${JSON.stringify(settings)}`)
       return settings
     },
 
