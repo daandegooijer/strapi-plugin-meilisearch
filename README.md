@@ -72,609 +72,317 @@ A dedicated admin panel for configuring Meilisearch settings without code change
 - **Automatic Settings Application** - Apply changes to all indexes instantly
 - **Persistent Settings** - Settings survive server restarts
 
-Inside your Strapi app, add the package:
+## Installation
 
-With `npm`:
-
-```bash
-npm install strapi-plugin-meilisearch
-```
-
-With `yarn`:
+Install this fork version with npm or yarn:
 
 ```bash
-yarn add strapi-plugin-meilisearch
+npm install strapi-plugin-meilisearch-fork
+# or
+yarn add strapi-plugin-meilisearch-fork
 ```
 
-To apply the plugin to Strapi, a re-build is needed:
+Rebuild Strapi:
 
 ```bash
-strapi build
+npm run build
+# or
+yarn build
 ```
 
-You will need both a running Strapi app and a running Meilisearch instance. For [specific version compatibility, see this section](#-compatibility-with-meilisearch-and-strapi).
+## Configuration
 
-### Run Meilisearch <!-- omit in toc -->
-
-⚡️ **Launch, scale, and streamline in minutes with Meilisearch Cloud**—no maintenance, no commitment, cancel anytime. [Try it free now](https://cloud.meilisearch.com/login?utm_campaign=oss&utm_source=github&utm_medium=strapi-plugin-meilisearch).
-
-🪨 Prefer to self-host? [Download and deploy](https://www.meilisearch.com/docs/learn/self_hosted/getting_started_with_self_hosted_meilisearch?utm_campaign=oss&utm_source=github&utm_medium=strapi-plugin-meilisearch) our fast, open-source search engine on your own infrastructure.
-
-### 🏃‍♂️ Run Strapi <!-- omit in toc -->
-
-If you don't have a running Strapi project yet, you can either launch the [playground present in this project](#-run-the-playground) or [create a Strapi project](https://strapi.io/documentation/developer-docs/latest/getting-started/quick-start.html).
-
-We recommend indexing your content-types to Meilisearch in development mode to allow the server reloads needed to apply or remove listeners.
-
-To start playground project you first need to run from the root of the repo
-
-```bash
-yarn watch:link
-```
-
-and after that in the playground
-
-```bash
-yarn dlx yalc add --link strapi-plugin-meilisearch && yarn install
-strapi develop
-// or
-yarn dlx yalc add --link strapi-plugin-meilisearch && yarn install
-yarn develop
-```
-
-### Run Both with Docker
-
-You can use Docker to run Meilisearch and Strapi on the same server. A Docker configuration example can be found in the directory [`resources/docker`](resources/docker/) of this repository.
-
-To run the Docker script add both files `Dockerfile` and `docker-compose.yaml` at the root of your Strapi project and run it with the following command: `docker-compose up`.
-
-## 🚀 Getting started
-
-Now that you have installed the plugin, a running Meilisearch instance and, a running Strapi app, let's go to the plugin page on your admin dashboard.
-
-On the left-navbar, `Meilisearch` appears under the `PLUGINS` category. If it does not, ensure that you have installed the plugin and re-build Strapi (see [installation](#-installation)).
-
-### 🤫 Add Credentials <!-- omit in toc -->
-
-First, you need to configure credentials via the Strapi config, or on the plugin page.
-The credentials are composed of:
-
-- The `host`: The url to your running Meilisearch instance.
-- The `api_key`: The `master` or `private` key as the plugin requires administration permission on Meilisearch.[More about permissions here](https://www.meilisearch.com/docs/reference/features/authentication.html).
-
-⚠️ The `master` or `private` key should never be used to `search` on your front end. For searching, use the `public` key available on [the `key` route](https://www.meilisearch.com/docs/reference/api/keys.html#get-keys).
-
-#### Using the plugin page
-
-You can add your Meilisearch credentials in the `settings` tab on the Meilisearch plugin page.
-
-For example, using the credentials from the section above: [`Run Meilisearch`](#-run-meilisearch), the following screen shows where the information should be.
-
-<p align="center">
-<img src="./assets/credentials-tab.png" alt="Add your credentials" width="600"/>
-</p>
-
-Once completed, click on the `add` button.
-
-#### Using a config file
-
-To use the Strapi config add the following to `config/plugins.js`:
+Configure the plugin in `config/plugins.js`:
 
 ```js
 // config/plugins.js
-
 module.exports = () => ({
-  //...
-  meilisearch: {
+  'meilisearch-fork': {
     config: {
-      // Your meili host
       host: 'http://localhost:7700',
-      // Your master key or private key
-      apiKey: 'masterKey',
-    },
-  },
-})
-```
-
-Note that if you use both methods, the config file overwrites the credentials added through the plugin page.
-
-### 🚛 Add your content-types to Meilisearch <!-- omit in toc -->
-
-If you don't have any content-types yet in your Strapi Plugin, please follow [Strapi quickstart](https://strapi.io/documentation/developer-docs/latest/getting-started/quick-start.html).
-
-We will use, as **example**, the content-types provided by Strapi's quickstart (plus the user content-type).
-
-On your plugin homepage, you should have two content-types appearing: `restaurant`, `category` and `user`.
-
-<p align="center">
-<img src="./assets/content-type-tab.png" alt="Content-types" width="600"/>
-</p>
-
-By clicking on the left checkbox, the content-type is automatically indexed in Meilisearch. For example, if you click on the `restaurant` checkbox, the indexing to Meilisearch starts.
-
-<p align="center">
-<img src="./assets/indexing.gif" alt="Content-types" width="600"/>
-</p>
-
-Once the indexing is done, your restaurants are in Meilisearch. We will see in [start searching](#-start-searching) how to try it out.
-
-### 🪝 Apply Hooks <!-- omit in toc -->
-
-Hooks are listeners that update Meilisearch each time you add/update/delete an entry in your content-types.
-They are activated as soon as you add a content-type to Meilisearch. For example by clicking on the checkbox of `restaurant`.
-
-Nonetheless, if you **remove a content-type** from Meilisearch by unchecking the checkbox, you need to reload the server. If you don't, actions are still listened to and applied to Meilisearch.
-The reload is only possible in develop mode; click on the `Reload Server` button. If not, reload the server manually!
-
-<p align="center">
-<img src="./assets/un-check.png" alt="Remove hook from content-type" width="600"/>
-</p>
-
-## 💅 Customization
-
-It is possible to add settings for every collection. Start by creating a sub-object with the name of the collection inside your `plugins.js` file.
-
-```js
-// config/plugins.js
-
-module.exports = () => ({
-  //...
-  meilisearch: {
-    config: {
-      restaurant: {},
-    },
-  },
-})
-```
-
-Settings:
-
-- [🏷 Custom index name](#-custom-index-name)
-- [🪄 Transform entries](#-transform-entries)
-- [🤚 Filter entries](#-filter-entries)
-- [🏗 Add Meilisearch settings](#-add-meilisearch-settings)
-- [🔎 Entries query](#-entries-query)
-- [🔐 Selectively index private fields](#-selectively-index-private-fields)
-
-### 🏷 Custom index name
-
-By default, when indexing a content-type in Meilisearch, the index in Meilisearch has the same name as the content-type. This behavior can be changed by setting the `indexName` property in the configuration file of the plugin.
-
-To link a single collection to multiple indexes, you can assign an array of index names to the `indexName` property.
-
-**Example 1: Linking a Single Collection to a Single Index**
-
-In the following examples, the `restaurant` content-type in Meilisearch is called `my_restaurant` instead of the default `restaurant`.
-
-```js
-// config/plugins.js
-
-module.exports = () => ({
-  //...
-  meilisearch: {
-    config: {
-      restaurant: {
-        indexName: 'my_restaurants',
+      apiKey: 'your_master_key',
+      indexName: 'content',
+      // Specify which content-types to index (optional)
+      includeContentTypes: ['post', 'page', 'home-page', 'job', 'job-overview'],
+      // Additional Meilisearch settings
+      settings: {
+        maxTotalHits: 10000,
       },
     },
   },
 })
 ```
 
-```js
-// config/plugins.js
+## Usage
 
-module.exports = () => ({
-  //...
-  meilisearch: {
-    config: {
-      restaurant: {
-        indexName: ['my_restaurants'],
-      },
-    },
-  },
-})
-```
+### Admin Panel Setup
 
-It is possible to bind multiple content-types to the same index. They all have to share the same `indexName`.
+1. **Navigate to Settings**: Go to `Plugins` → `Meilisearch` in the Strapi admin panel
+2. **Add Credentials** (if not using config file):
+   - Enter Meilisearch host URL (e.g., `http://localhost:7700`)
+   - Enter Master or Private API key
+3. **Index Content Types**: Check the content-types you want to index
 
-For example if `shoes` and `shirts` should be bound to the same index, they must have the same `indexName` in the plugin configuration:
+### Managing Index Settings
 
-```js
-// config/plugins.js
-
-module.exports = () => ({
-  //...
-  meilisearch: {
-    config: {
-      shirts: {
-        indexName: ['products'],
-      },
-      shoes: {
-        indexName: ['products'],
-      },
-    },
-  },
-})
-```
+Once content-types are indexed, use the **Index Settings** tab to configure Meilisearch behavior:
 
-Now, on each entry addition from both `shoes` and `shirts` the entry is added in the `product` index of Meilisearch.
+#### 🔍 Filterable Attributes
 
-**Example 2: Linking a Single Collection to Multiple Indexes**
+Choose which fields can be used in filters:
 
-Suppose you want the `restaurant` content-type to be indexed under both `my_restaurants` and `all_food_places` indexes in Meilisearch. You can achieve this by setting the `indexName` property to an array containing both index names, as shown in the configuration below:
+- Click the **Filterable** tab
+- Check fields you want to be searchable/filterable
+- Example: If you check `title` and `category`, users can filter by: `/search?filters=title="My Post" AND category="News"`
+- **Special**: The `_contentType` field is always filterable by default
 
-```js
-// config/plugins.js
+#### 🔀 Sortable Attributes
 
-module.exports = () => ({
-  //...
-  meilisearch: {
-    config: {
-      restaurant: {
-        indexName: ['my_restaurants', 'all_food_places'],
-      },
-    },
-  },
-})
-```
+Choose which fields can be sorted:
 
-**disclaimer**
+- Click the **Sortable** tab
+- Check fields you want to allow sorting
+- Example: If you check `createdAt` and `title`, users can sort by: `/search?sort=createdAt:desc`
 
-Nonetheless, it is not possible to know how many entries from each content-type is added to Meilisearch.
+#### 📄 Pagination Limits
 
-For example, given two content-types:
+Configure the maximum number of results:
 
-- `Shoes`: with 300 entries and an `indexName` set to `product`
-- `Shirts`: 200 entries and an `indexName` set to `product`
+- Set **Max Total Hits** to control pagination limits
+- Default: 10000 (Meilisearch default)
+- Common values: 1000, 10000, 100000
 
-The index `product` has both the entries of shoes and shirts. If the index `product` has `350` documents in Meilisearch, it is not possible to know how many of them are from `shoes` or `shirts`.
+#### 💾 Saving Settings
 
-When removing `shoes` or `shirts` from Meilisearch, both are removed as it would require too much processing to only remove one. You can still re-index only one after that.
+- Select your field configuration
+- Click **Save Settings**
+- Settings are automatically applied to all configured Meilisearch indexes
+- No server restart needed
 
-<p align="center">Example with two single types:</p>
-<p align="center">
-<img src="./assets/same-index.gif" alt="Example of two content-types with same indexName" width="600"/>
-</p>
-
-Examples can be found [this directory](./resources/custom-index-name).
-
-### 🪄 Transform entries
-
-By default, the plugin sent the data the way it is stored in your Strapi content-type. It is possible to remove or transform fields before sending your entries to Meilisearch.
-
-Create the alteration function `transformEntry` in the plugin's configuration file. Before sending the data to Meilisearch, every entry passes through this function where the alteration is applied.
+## API Endpoints
 
-`transformEntry` can be `synchronous` or `asynchronous`.
-
-You can find a lot of examples in [this directory](./resources/entries-transformers).
+This fork adds three new REST endpoints for programmatic settings management:
 
-**Example**
+### GET `/api/meilisearch/index-settings/content-types`
 
-For example, the `restaurant` content-type has a relation with the `category` content-type. Inside a `restaurant` entry the `categories` field contains an array of each category in an `object` format: `[{ name: "Brunch" ...}, { name: "Italian ... }]`.
+Fetch all indexed content-types with their available fields and current settings.
 
-The following transforms `categories` in an array of strings containing only the name of the category:
-
-```js
-// config/plugins.js
-
-module.exports = {
-  meilisearch: {
-    config: {
-      restaurant: {
-        transformEntry({ entry }) {
-          // can also be async
-          return {
-            ...entry,
-            categories: entry.categories.map(category => category.name),
-          }
-        },
-      },
-    },
-  },
-}
-```
-
-Result:
-
-```json
-{
-  "id": 2,
-  "name": "Squared Pizza",
-  "categories": ["Brunch", "Italian"]
-  // other fields
-}
-```
-
-By transforming the `categories` into an array of names, it is now compatible with the [`filtering` feature](https://www.meilisearch.com/docs/reference/features/filtering_and_faceted_search.html#configuring-filters) in Meilisearch.
-
-**Important**: You should always return the id of the entry without any transformation to [allow sync](https://github.com/meilisearch/strapi-plugin-meilisearch/issues/487) when unpublished or deleting some entries in Strapi.
-
-### 🤚 Filter entries
-
-You might want to filter out some entries. This is possible with the `filterEntry`. Imagine you don't like `Alfredo's` restaurant. You can filter out this specific entry.
-
-`filterEntry` can be `synchronous` or `asynchronous`.
-
-```js
-// config/plugins.js
-
-module.exports = {
-  meilisearch: {
-    config: {
-      restaurant: {
-        filterEntry({ entry }) {
-          // can also be async
-          return entry.title !== `Alfredo`
-        },
-      },
-    },
-  },
-}
-```
-
-`Alfredo's` restaurant is not added to Meilisearch.
-
-### 🏗 Add Meilisearch settings
-
-Each index in Meilisearch can be customized with specific settings. It is possible to add your [Meilisearch settings](https://www.meilisearch.com/docs/reference/api/settings#settings_parameters#settings) configuration to the indexes you create using the `settings` field in the plugin configuration file.
-
-The settings are added when either: adding a content-type to Meilisearch or when updating a content-type in Meilisearch. The settings are not updated when documents are added through the [`listeners`](-apply-hooks).
-
-**For example**
-
-```js
-module.exports = {
-  meilisearch: {
-    config: {
-      restaurant: {
-        settings: {
-          filterableAttributes: ['categories'],
-          synonyms: {
-            healthy: ['pokeball', 'vegan'],
-          },
-        },
-      },
-    },
-  },
-}
-```
-
-[See resources](./resources/meilisearch-settings) for more settings examples.
-
-### 🔎 Entries query
-
-When indexing a content type to Meilisearch, the plugin has to fetch the documents from your database. With `entriesQuery` it is possible to specify some options are applied during the fetching of the entries.
-The options you can set are described in the [`findMany` documentation](https://docs.strapi.io/developer-docs/latest/developer-resources/database-apis-reference/entity-service/crud.html#findmany) of Strapi. However, we do not accept any changes on the `start` parameter.
-
-**Common use cases**
-
-If you are localizing your Strapi content, an additional field `locale` should also be added in `entriesQuery`.
-
-⚠️ Warning: if you do not specify `locale: "*"` in `entriesQuery`, you may not index all available entries, potentially leading to missing products in your search results. To ensure all entries in every language are indexed in Meilisearch, include the `locale` field with the value 'all'.
-
-```js
-module.exports = {
-  meilisearch: {
-    config: {
-      restaurant: {
-        entriesQuery: {
-          locale: '*',
-        },
-      },
-    },
-  },
-}
-```
-
-If you are using Strapi 4 with the [🌍 Internationalization (i18n)](https://docs.strapi.io/developer-docs/latest/plugins/i18n.html) plugin, the `locale` field should be set to `all`.
-
-If you want to add a collection with a relation to the collection being included, you have to configure the `populate` parameter in `entriesQuery`. See [the docs](https://docs.strapi.io/dev-docs/api/entity-service/populate) on how it works, and [an example](./resources/entries-query/populate.js) in our resources.
-
-**Example**
-
-If you want your documents to be fetched in batches of `1000` you specify it in the `entriesQuery` option.
-
-```js
-module.exports = {
-  meilisearch: {
-    config: {
-      restaurant: {
-        entriesQuery: {
-          limit: 1000,
-        },
-      },
-    },
-  },
-}
-```
-
-[See resources](./resources/entries-query) for more entriesQuery examples.
-
-### 🔐 Selectively index private fields
-
-Private fields are sanitized by default to prevent data leaks. However, you might want to allow some of these private fields to be used for `search`, `filter` or `sort`. This is possible with the `noSanitizePrivateFields`. For example, if you have a private field called `internal_notes` in your content-type schema that you wish to include in searching, you can add it to the `noSanitizePrivateFields` array to allow it to be indexed.
-
-```js
-// config/plugins.js
-
-module.exports = {
-  meilisearch: {
-    config: {
-      restaurant: {
-        noSanitizePrivateFields: ['internal_notes'], // All attributes: ["*"]
-        settings: {
-          searchableAttributes: ['internal_notes'],
-        },
-      },
-    },
-  },
-}
-```
-
-### 🕵️‍♀️ Start Searching <!-- omit in toc -->
-
-Once you have a content-type indexed in Meilisearch, you can [start searching](https://www.meilisearch.com/docs/learn/getting_started/quick_start.html#search).
-
-To search in Meilisearch, you can use the [instant-meilisearch](https://github.com/meilisearch/meilisearch-js-plugins/tree/main/packages/instant-meilisearch) library that integrates a whole search interface, or our [meilisearch-js](https://github.com/meilisearch/meilisearch-js) SDK.
-
-#### ⚡️ Using Instant Meilisearch <!-- omit in toc -->
-
-You can have a front up and running in record time with [instant-meilisearch](https://github.com/meilisearch/meilisearch-js-plugins/tree/main/packages/instant-meilisearch).
-
-<p align="center">
-<img src="./assets/obrigado.gif" alt="Restaurant demo" width="600"/>
-</p>
-
-In Instant Meilisearch, you only have to provide your credentials and index name (_uid_). `restaurant` is the index name in our example.
-
-You can have a quick preview with the following code in an HTML file. Create an HTML file, copy-paste the code below and open the file in your browser (or find it in `/front_examples/restaurant.html`).
-
-```html
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@meilisearch/instant-meilisearch/templates/basic_search.css"
-    />
-  </head>
-  <body>
-    <div class="wrapper">
-      <div id="searchbox" focus></div>
-      <div id="hits"></div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/@meilisearch/instant-meilisearch/dist/instant-meilisearch.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/instantsearch.js@4"></script>
-    <script>
-      const search = instantsearch({
-        indexName: 'restaurant',
-        searchClient: instantMeiliSearch(
-          'http://localhost:7700',
-          'publicKey', // Use the public key not the private or master key to search.
-        ),
-      })
-
-      search.addWidgets([
-        instantsearch.widgets.searchBox({
-          container: '#searchbox',
-        }),
-        instantsearch.widgets.configure({ hitsPerPage: 8 }),
-        instantsearch.widgets.hits({
-          container: '#hits',
-          templates: {
-            item: `
-                      <div>
-                      <div class="hit-name">
-                          {{#helpers.highlight}}{ "attribute": "name" }{{/helpers.highlight}}
-                      </div>
-                      </div>
-                  `,
-          },
-        }),
-      ])
-      search.start()
-    </script>
-  </body>
-</html>
-```
-
-#### 💛 Using Meilisearch for JS <!-- omit in toc -->
-
-You can also use [meilisearch-js](https://github.com/meilisearch/meilisearch-js) to communicate with Meilisearch.
-
-The following code is a setup that will output a restaurant after a search.
-
-```javascript
-import { MeiliSearch } from 'meilisearch'
-;(async () => {
-  const client = new MeiliSearch({
-    host: 'http://127.0.0.1:7700',
-    apiKey: 'publicKey', // Use the public key not the private or master key to search.
-  })
-
-  // An index is where the documents are stored.
-  const response = client.index('movies').search('Biscoutte')
-})()
-```
-
-**response content**:
-
-```json
-{
-  "hits": [
-    {
-      "id": 3,
-      "name": "Biscotte Restaurant",
-      "description": "Welcome to Biscotte restaurant! Restaurant Biscotte offers a cuisine based on fresh, quality products, often local, organic when possible, and always produced by passionate producers.",
-      "categories": []
-    }
-  ],
-  "offset": 0,
-  "limit": 20,
-  "nbHits": 1,
-  "exhaustiveNbHits": false,
-  "processingTimeMs": 1,
-  "query": "biscoutte"
-}
-```
-
-## 💡 Run the Playground
-
-Instead of adding the plugin to an existing project, you can try it out using the playground in this project.
+**Request:**
 
 ```bash
-# Root of repository
-yarn watch:link # Build the plugin and release it with yalc
-
-# Playground dir
-yarn dlx yalc add --link strapi-plugin-meilisearch && yarn install
-
-# Root of repository
-yarn playground:build # Build the playground
-yarn playground:dev # Start the development server
+GET /api/meilisearch/index-settings/content-types
 ```
 
-This command will install the required dependencies and launch the app in development mode. You should be able to reach it on the [port 1337 of your localhost](http://localhost:1337/admin/).
+**Response:**
 
-## 🤖 Compatibility with Meilisearch and Strapi
+```json
+{
+  "contentTypes": [
+    {
+      "name": "post",
+      "fields": ["id", "title", "description", "createdAt", "author"],
+      "filterableAttributes": ["title"],
+      "sortableAttributes": ["createdAt"],
+      "maxTotalHits": 10000
+    }
+  ]
+}
+```
 
-**Supported Strapi versions**:
+### POST `/api/meilisearch/index-settings/save`
 
-Complete installation requirements are the same as for Strapi itself and can be found in the documentation under [installation Requirements](https://strapi.io/documentation/v3.x/installation/cli.html#step-1-make-sure-requirements-are-met).
+Save filterable/sortable attributes and max total hits for all indexes.
 
-- Strapi `>=v5.x.x`
+**Request:**
 
-If you are using [Strapi v3](https://github.com/strapi/strapi/tree/v3.6.9), please refer to [this README](https://github.com/meilisearch/strapi-plugin-meilisearch/tree/v0.5.1).
+```bash
+POST /api/meilisearch/index-settings/save
+Content-Type: application/json
 
-**Supported Meilisearch versions**:
+{
+  "settings": {
+    "filterableAttributes": ["title", "_contentType"],
+    "sortableAttributes": ["createdAt"],
+    "maxTotalHits": 100000
+  }
+}
+```
 
-This package guarantees compatibility with [version v1.x of Meilisearch](https://github.com/meilisearch/meilisearch/releases/latest), but some features may not be present. Please check the [issues](https://github.com/meilisearch/strapi-plugin-meilisearch/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22+label%3Aenhancement) for more info.
+**Response:**
 
-**Node**:
+```json
+{
+  "success": true,
+  "message": "Saved merged index settings: filterable=[title,_contentType], sortable=[createdAt]"
+}
+```
 
-- NodeJS >= 18
+### POST `/api/meilisearch/index-settings/apply`
 
-**We recommend always using the latest version of Strapi to start your new projects**.
+Apply saved settings to all configured Meilisearch indexes.
 
-## ⚙️ Development Workflow and Contributing
+**Request:**
 
-Any new contribution is more than welcome in this project!
+```bash
+POST /api/meilisearch/index-settings/apply
+```
 
-If you want to know more about the development workflow or want to contribute, please visit our [contributing guidelines](/CONTRIBUTING.md) for detailed instructions!
+**Response:**
 
-## 🌎 Community support
+```json
+{
+  "success": true,
+  "message": "Applied settings to all configured indexes"
+}
+```
 
-- For general help using **Meilisearch**, please refer to [the official Meilisearch documentation](https://www.meilisearch.com/docs).
-- Contact the [Meilisearch support](https://www.meilisearch.com/docs/learn/what_is_meilisearch/contact.html)
-- Strapi [community Slack](https://slack.strapi.io/)
-- For general help using **Strapi**, please refer to [the official Strapi documentation](https://strapi.io/documentation/).
+## Architecture
 
-## 🤩 Just for the pleasure of the eyes
+### Unified Settings Model
 
-Using the [foodadvisor](https://github.com/strapi/foodadvisor) restaurant demo Strapi provided. We added a searchbar to it using [instant-meilisearch](https://github.com/meilisearch/meilisearch-js-plugins/tree/main/packages/instant-meilisearch).
+Unlike the original plugin, this fork uses a **unified settings model** where all settings are merged across content-types. This approach has several advantages:
 
-<p align="center">
-<img src="./assets/restaurant.gif" alt="Foodadvisor demo" width="600"/>
-</p>
+- **Meilisearch-appropriate**: Meilisearch treats indexes globally, not per-content-type
+- **Simpler UI**: Tab-based interface for clarity, but stored as unified settings
+- **Consistent behavior**: Same filterable fields across all indexes
+- **Easier maintenance**: Single source of truth for settings
+
+### Settings Storage
+
+Settings are persisted in Strapi's store service:
+
+- **Key**: `meilisearch-index-settings` - Contains merged filterable/sortable arrays
+- **Key**: `meilisearch-max-total-hits` - Contains pagination limit
+- Survives server restarts
+- Can be backed up with other Strapi data
+
+### Automatic Application
+
+Settings are applied to Meilisearch in two ways:
+
+1. **On Index Operations**: When documents are published/updated, settings are applied before indexing
+2. **Manual**: Via the admin UI "Save Settings" button or `/apply` endpoint
+
+### Field Validation
+
+The system validates stored field names against available fields:
+
+- Removes invalid fields if content-type structure changes
+- Prevents corruption from stale data
+- Ensures settings always match current schema
+
+## Troubleshooting
+
+### Settings Not Showing in Admin UI
+
+**Problem**: The Index Settings tab is empty
+
+**Solution**:
+
+1. Ensure content-types are indexed (checked in main tab)
+2. Check browser console for errors
+3. Verify Meilisearch connection in Credentials tab
+4. Check server logs for API errors
+
+### Settings Not Applying to Meilisearch
+
+**Problem**: Settings are saved but not appearing in Meilisearch admin
+
+**Solution**:
+
+1. Click "Save Settings" first (saves to Strapi database)
+2. Click "Apply Settings" button (applies to Meilisearch)
+3. Or use POST `/api/meilisearch/index-settings/apply` endpoint
+4. Check that content-types are in `includeContentTypes` config
+
+### Only Configured Content-Types Affected
+
+**Note**: The plugin only applies settings to content-types in your `includeContentTypes` configuration. This prevents accidental modification of unintended indexes.
+
+### Excessive Logging
+
+**Info**: The plugin uses debug-level logging for repeated operations (e.g., `ensureIndexSettings` on every index operation). To see these logs:
+
+```bash
+# Set Strapi log level to debug
+strapi develop --log-level debug
+```
+
+## Migration from Original Plugin
+
+If you're upgrading from `strapi-plugin-meilisearch`:
+
+### 1. Install This Fork
+
+```bash
+npm uninstall strapi-plugin-meilisearch
+npm install strapi-plugin-meilisearch-fork
+npm run build
+```
+
+### 2. Update Configuration
+
+Change your `config/plugins.js`:
+
+```js
+// Before
+meilisearch: { ... }
+
+// After
+'meilisearch-fork': { ... }
+```
+
+### 3. Settings Migration
+
+**Automatic**: Your existing indexes and content will continue to work. No data migration needed.
+
+**Manual** (optional): Configure new Index Settings UI:
+
+- Go to admin panel
+- Navigate to Meilisearch plugin
+- Click "Index Settings" tab
+- Configure filterable/sortable attributes
+- Click "Save Settings"
+
+### 4. No Breaking Changes
+
+- All original plugin functionality is preserved
+- Existing indexes continue working unchanged
+- New features are opt-in via the admin UI
+- Can revert to original plugin if needed
+
+## Contributing
+
+To contribute improvements to this fork:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+This fork is maintained separately from the original. For original plugin issues, refer to [strapi-plugin-meilisearch](https://github.com/protofrak/strapi-plugin-meilisearch).
+
+## License
+
+MIT License - See LICENSE file for details
+
+---
+
+## Related Links
+
+- [Meilisearch Documentation](https://www.meilisearch.com/docs)
+- [Strapi Documentation](https://docs.strapi.io)
+- [Original Plugin](https://github.com/protofrak/strapi-plugin-meilisearch)
+- [Fork Repository](https://github.com/daandegooijer/strapi-plugin-meilisearch)
+- [npm Package](https://www.npmjs.com/package/strapi-plugin-meilisearch-fork)
+
+## Support
+
+For issues with this fork:
+
+- Check the [Troubleshooting](#troubleshooting) section
+- Open an issue on GitHub
+- Review Meilisearch and Strapi documentation
+
+For issues with the original plugin, refer to [strapi-plugin-meilisearch](https://github.com/protofrak/strapi-plugin-meilisearch)
